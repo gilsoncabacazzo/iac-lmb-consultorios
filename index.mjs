@@ -1,0 +1,148 @@
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const { 
+  DynamoDBDocumentClient, 
+  PutCommand, 
+  ScanCommand, 
+  UpdateCommand 
+} = require("@aws-sdk/lib-dynamodb");
+
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
+const TABLA_CONSULTORIOS = process.env.TABLA_CONSULTORIOS || "docfy-consultorios";
+
+exports.handler = async (event) => {
+  console.log("🚨 Evento recibido:", JSON.stringify(event));
+  
+  const httpMethod = event.httpMethod || event.requestContext?.http?.method;
+  const pathParameters = event.pathParameters || {};
+  
+  // Capturamos el rol que viene de Cognito solo para controles de acceso
+  const userRole = event.requestContext?.authorizer?.claims?.['custom:role'] || "MEDICO";
+
+  try {
+    // ========================================================
+    // 🏢 1. INSERTAR CONSULTORIO (POST)
+    // ========================================================
+    if (httpMethod === "POST") {
+      const body = JSON.parse(event.body || "{}");
+      
+      // 🔥 VALIDACIÓN CRÍTICA: Validamos que venga el ID de tu tabla de usuarios
+      if (!body.usuarioId) {
+        return respuesta(400, { message: "Error: No se recibió el ID de usuario del sistema." });
+      }
+
+      if (!body.nombre || !body.direccion || !body.ciudad || !body.celular) {
+        return respuesta(400, { message: "Faltan campos obligatorios." });
+      }
+
+      const nuevoConsultorio = {
+        id: `CONS-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        nombre: body.nombre,
+        direccion: body.direccion,
+        ciudad: body.ciudad,
+        lineaBaja: body.lineaBaja || "",
+        celular: body.celular,
+        usuarioId: body.usuarioId, // ◄ Guardado directo con el ID de tu tabla interna de usuarios
+        fechaCreacion: new Date().toISOString(),
+        fechaActualizacion: new Date().toISOString()
+      };
+
+      await docClient.send(new PutCommand({
+        TableName: TABLA_CONSULTORIOS,
+        Item: nuevoConsultorio
+      }));
+
+      return respuesta(201, { message: "Consultorio creado con éxito", consultorio: nuevoConsultorio });
+    }
+
+    // ========================================================
+    // 📋 2. LISTAR CONSULTORIOS (GET)
+    // ========================================================
+    if (httpMethod === "GET") {
+      // Podemos recibir el usuarioId por Query String Parameters si el frontend quiere filtrar (ej: /consultorios?usuarioId=USR-123)
+      const queryParams = event.queryStringParameters || {};
+      const filtroUsuarioId = queryParams.usuarioId;
+
+      const resultado = await docClient.send(new ScanCommand({
+        TableName: TABLA_CONSULTORIOS
+      }));
+
+      let lista = resultado.Items || [];
+
+      // 🔍 Si pasaron un usuarioId específico para filtrar en este CRUD:
+      if (filtroUsuarioId) {
+        lista = lista.filter(c => c.usuarioId === filtroUsuarioId);
+      } else if (userRole !== "ADMIN" && userRole !== "SECRETARIA") {
+         // Protección por defecto si un médico intenta listar todo sin pasar su ID
+         return respuesta(403, { message: "No tienes permisos para listar todos los consultorios." });
+      }
+
+      return respuesta(200, lista);
+    }
+
+    // ========================================================
+    // 🔄 3. ACTUALIZAR CONSULTORIO (PUT)
+    // ========================================================
+    if (httpMethod === "PUT") {
+      const idConsultorio = pathParameters.id;
+      if (!idConsultorio) {
+        return respuesta(400, { message: "Se requiere el ID del consultorio." });
+      }
+
+      const body = JSON.parse(event.body || "{}");
+
+      const updateExpression = [];
+      const expressionAttributeNames = {};
+      const expressionAttributeValues = {};
+
+      // Permitimos actualizar datos del consultorio, pero el usuarioId original NO se toca
+      const camposPermitidos = ["nombre", "direccion", "ciudad", "lineaBaja", "celular"];
+      
+      camposPermitidos.forEach(campo => {
+        if (body[campo] !== undefined) {
+          updateExpression.push(`#${campo} = :${campo}`);
+          expressionAttributeNames[`#${campo}`] = campo;
+          expressionAttributeValues[`:${campo}`] = body[campo];
+        }
+      });
+
+      if (updateExpression.length === 0) {
+        return respuesta(400, { message: "No hay campos para actualizar." });
+      }
+
+      updateExpression.push("#fechaActualizacion = :fechaActualizacion");
+      expressionAttributeNames["#fechaActualizacion"] = "fechaActualizacion";
+      expressionAttributeValues[":fechaActualizacion"] = new Date().toISOString();
+
+      const resultado = await docClient.send(new UpdateCommand({
+        TableName: TABLA_CONSULTORIOS,
+        Key: { id: idConsultorio },
+        UpdateExpression: `SET ${updateExpression.join(", ")}`,
+        ExpressionAttributeNames: expressionAttributeNames,
+        ExpressionAttributeValues: expressionAttributeValues,
+        ReturnValues: "ALL_NEW"
+      }));
+
+      return respuesta(200, { message: "Consultorio actualizado", consultorio: resultado.Attributes });
+    }
+
+    return respuesta(405, { message: "Método no permitido." });
+
+  } catch (error) {
+    console.error("🚨 Error:", error);
+    return respuesta(500, { message: "Error interno", error: error.message });
+  }
+};
+
+const respuesta = (statusCode, body) => {
+  return {
+    statusCode,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+      "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS"
+    },
+    body: JSON.stringify(body)
+  };
+};
