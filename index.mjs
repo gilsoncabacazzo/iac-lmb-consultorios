@@ -39,6 +39,19 @@ exports.handler = async (event) => {
       const total = (escaneo.Items || []).length;
       const siguienteNumero = String(total + 1).padStart(3, '0'); // Ej: "001", "002"
 
+      // 🔥 CREAMOS LA LISTA ÚNICA 'Usuarios'
+      // Usamos un Set para asegurar que no se dupliquen IDs si ya venía en el body
+      const usuariosSet = new Set(body.Usuarios || []);
+      usuariosSet.add(body.usuarioId); // ◄ Vinculamos al creador de forma obligatoria
+
+      // ⏳ LEER DÍAS DE TRIAL DESDE VARIABLES DE ENTORNO
+      // parseInt convierte el string de la variable a número. Si no existe, usa 30 por defecto.
+      const DIAS_TRIAL = parseInt(process.env.DIAS_TRIAL, 10) || 30; 
+    
+      const fechaActual = new Date();
+      const fechaFinTrial = new Date();
+      fechaFinTrial.setDate(fechaActual.getDate() + DIAS_TRIAL);
+
       const nuevoConsultorio = {
         id: `CONS-${siguienteNumero}`,
         nombre: body.nombre,
@@ -47,6 +60,14 @@ exports.handler = async (event) => {
         lineaBaja: body.lineaBaja || "",
         celular: body.celular,
         usuarioId: body.usuarioId, // ◄ Guardado directo con el ID de tu tabla interna de usuarios
+        Usuarios: Array.from(usuariosSet), // ◄ Guardado como la lista plana de IDs de Dynamo
+        // 💳 OBJETO DE SUSCRIPCIÓN ENCAPSULADO
+        InfoSuscripcion: {
+            estado: "TRIAL",
+            fechaInicio: fechaActual.toISOString(),
+            fechaFin: fechaFinTrial.toISOString(),
+            ultimaFechaPago: fechaActual.toISOString() // Inicializa con la fecha de alta
+        },
         fechaCreacion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString()
       };
@@ -100,7 +121,8 @@ exports.handler = async (event) => {
       const expressionAttributeValues = {};
 
       // Permitimos actualizar datos del consultorio, pero el usuarioId original NO se toca
-      const camposPermitidos = ["nombre", "direccion", "ciudad", "lineaBaja", "celular"];
+    // Dentro del bloque if (httpMethod === "PUT") de tu Lambda:
+      const camposPermitidos = ["nombre", "direccion", "ciudad", "lineaBaja", "celular", "InfoSuscripcion"];      
       
       camposPermitidos.forEach(campo => {
         if (body[campo] !== undefined) {

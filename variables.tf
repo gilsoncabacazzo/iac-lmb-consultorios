@@ -34,3 +34,8 @@ variable "runtime" {
   description = "runtime de la lambda"
   default = "nodejs22.x"
 }
+variable "dias_trial" {
+  type        = string
+  description = ""
+  default = "20"
+}
