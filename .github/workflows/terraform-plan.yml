@@ -101,7 +101,7 @@ jobs:
           -out=tfplan
         env:
           TF_VAR_dynamodb_tables_json: ${{ vars.DYNAMODB_TABLES }}
-          TF_VAR_tabla_consultorio: ${{ vars.TABLE_CONSULTORIO}}
+          TF_VAR_tabla_consultorio: ${{ vars.TABLE_CONSULTORIOS}}
           
       - name: Guardar ZIPs para el Apply
         uses: actions/upload-artifact@v4
