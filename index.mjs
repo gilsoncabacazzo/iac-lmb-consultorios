@@ -35,8 +35,12 @@ exports.handler = async (event) => {
         return respuesta(400, { message: "Faltan campos obligatorios." });
       }
 
+      const escaneo = await docClient.send(new ScanCommand({ TableName: TABLA_CONSULTORIOS }));
+      const total = (escaneo.Items || []).length;
+      const siguienteNumero = String(total + 1).padStart(3, '0'); // Ej: "001", "002"
+
       const nuevoConsultorio = {
-        id: `CONS-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        id: `CONS-${siguienteNumero}`,
         nombre: body.nombre,
         direccion: body.direccion,
         ciudad: body.ciudad,
