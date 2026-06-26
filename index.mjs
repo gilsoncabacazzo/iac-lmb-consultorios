@@ -96,7 +96,7 @@ exports.handler = async (event) => {
 
       // 🔍 Si pasaron un usuarioId específico para filtrar en este CRUD:
       if (filtroUsuarioId) {
-        lista = lista.filter(c => c.usuarioId === filtroUsuarioId);
+        lista = lista.filter(c => Array.isArray(c.Usuarios) && c.Usuarios.includes(filtroUsuarioId));
       } else if (userRole !== "ADMIN" && userRole !== "SECRETARIA") {
          // Protección por defecto si un médico intenta listar todo sin pasar su ID
          return respuesta(403, { message: "No tienes permisos para listar todos los consultorios." });
