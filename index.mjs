@@ -1,16 +1,11 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { 
-  DynamoDBDocumentClient, 
-  PutCommand, 
-  ScanCommand, 
-  UpdateCommand 
-} = require("@aws-sdk/lib-dynamodb");
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 const TABLA_CONSULTORIOS = process.env.TABLA_CONSULTORIOS || "docfy-consultorios";
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   console.log("🚨 Evento recibido:", JSON.stringify(event));
   
   const httpMethod = event.httpMethod || event.requestContext?.http?.method;
