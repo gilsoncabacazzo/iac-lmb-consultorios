@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand ,ScanCommand} from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -26,7 +26,10 @@ export const handler = async (event) => {
         return respuesta(400, { message: "Error: No se recibió el ID de usuario del sistema." });
       }
 
-      if (!body.nombre || !body.direccion || !body.ciudad || !body.celular) {
+      const { nombre, direccion, ciudad, lineaBaja, celular, email, Usuarios } = body;
+
+      
+      if (!body.nombre || !body.direccion || !body.ciudad || !body.celular || !body.email) {
         return respuesta(400, { message: "Faltan campos obligatorios." });
       }
 
@@ -54,6 +57,7 @@ export const handler = async (event) => {
         ciudad: body.ciudad,
         lineaBaja: body.lineaBaja || "",
         celular: body.celular,
+        email: email.toLowerCase(),
         usuarioId: body.usuarioId, // ◄ Guardado directo con el ID de tu tabla interna de usuarios
         Usuarios: Array.from(usuariosSet), // ◄ Guardado como la lista plana de IDs de Dynamo
         // 💳 OBJETO DE SUSCRIPCIÓN ENCAPSULADO
