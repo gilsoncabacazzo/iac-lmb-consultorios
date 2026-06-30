@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, PutCommand ,ScanCommand} from "@aws-sdk/lib-dyn
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
-const TABLA_CONSULTORIOS = process.env.TABLA_CONSULTORIOS || "docfy-consultorios";
+const TABLA_CONSULTORIOS = process.env.TABLE_CONSULTORIO || "docfy-consultorios";
 
 export const handler = async (event) => {
   console.log("🚨 Evento recibido:", JSON.stringify(event));
