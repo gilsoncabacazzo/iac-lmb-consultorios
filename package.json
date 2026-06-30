@@ -12,5 +12,10 @@
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/lib-dynamodb": "^3.0.0",
     "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.5.0",
+    "@eslint/js": "^9.5.0",
+    "globals": "^15.6.0"
   }
 }
