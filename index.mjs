@@ -51,7 +51,7 @@ export const handler = async (event) => {
       fechaFinTrial.setDate(fechaActual.getDate() + DIAS_TRIAL);
 
       const nuevoConsultorio = {
-        id: `CONS-${siguienteNumero}`,
+        consultorio_id : `CONS-${siguienteNumero}`,
         nombre: body.nombre,
         direccion: body.direccion,
         ciudad: body.ciudad,
