@@ -194,6 +194,7 @@ const respuesta = (statusCode, body) => {
     headers: {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*", 
+            "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Usuario-Id,X-Consultorio-Id",
             "Access-Control-Allow-Credentials": true
         },
     body: JSON.stringify(body)
