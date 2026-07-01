@@ -24,6 +24,7 @@ resource "aws_lambda_function" "registro_consultorio" {
   environment {
     variables = {
       TABLE_CONSULTORIO       = var.tabla_consultorio
+      TABLE_USUARIOS       = var.tabla_usuarios
       NODE_ENV             = var.environment
       DIAS_TRIAL = var.dias_trial
     }

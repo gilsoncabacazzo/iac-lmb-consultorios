@@ -4,6 +4,7 @@ import { DynamoDBDocumentClient, PutCommand ,ScanCommand} from "@aws-sdk/lib-dyn
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 const TABLA_CONSULTORIOS = process.env.TABLE_CONSULTORIO || "docfy-consultorios";
+const TABLA_USUARIOS = process.env.TABLE_USUARIOS || "docfy-usuarios";
 
 export const handler = async (event) => {
   console.log("🚨 Evento recibido:", JSON.stringify(event));
@@ -49,9 +50,9 @@ export const handler = async (event) => {
       const fechaActual = new Date();
       const fechaFinTrial = new Date();
       fechaFinTrial.setDate(fechaActual.getDate() + DIAS_TRIAL);
-
+      const consultorioId =`CONS-${siguienteNumero}`;
       const nuevoConsultorio = {
-        consultorio_id : `CONS-${siguienteNumero}`,
+        consultorio_id : consultorioId,
         nombre: body.nombre,
         direccion: body.direccion,
         ciudad: body.ciudad,
@@ -74,6 +75,20 @@ export const handler = async (event) => {
       await docClient.send(new PutCommand({
         TableName: TABLA_CONSULTORIOS,
         Item: nuevoConsultorio
+      }));
+
+      await docClient.send(new UpdateCommand({
+        TableName: TABLA_USUARIOS,
+        Key: { 
+          // Indicamos que busque la fila donde la columna 'usuario_id' coincida con el ID del token
+          usuario_id: body.usuarioId // Este campo es un String (ej: "93cb564b-...")
+        },
+        // Usamos SET para agregar o actualizar la columna 'consultorio_id' con el nuevo valor
+        UpdateExpression: "SET consultorio_id = :cid, fecha_modificacion = :mod",
+        ExpressionAttributeValues: {
+          ":cid": consultorioId,          // El String del consultorio (ej: "CON-8847a1")
+          ":mod": new Date().toISOString()     // Fecha de auditoría
+        }
       }));
 
       return respuesta(201, { message: "Consultorio creado con éxito", consultorio: nuevoConsultorio });

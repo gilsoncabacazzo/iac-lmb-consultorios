@@ -29,6 +29,10 @@ variable "tabla_consultorio" {
   type        = string
   description = "Nombre exacto de la tabla de turnos"
 }
+variable "tabla_usuarios" {
+  type        = string
+  description = "Nombre exacto de la tabla de turnos"
+}
 variable "runtime" {
   type        = string
   description = "runtime de la lambda"
