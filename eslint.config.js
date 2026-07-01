@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import globals from "globals";
+import eslintPluginImport from "eslint-plugin-import"; // ◄ 1. Importás el plugin
 
 export default [
     js.configs.recommended,
@@ -15,6 +16,7 @@ export default [
         rules: {
             "no-undef": "error",       // <-- ESTO detendrá el pipeline si 'responder' no está declarada
             "no-unused-vars": "warn",   // Te avisa si declaras variables que no usas
+            "import/named": "error"
         },
     },
 ];
