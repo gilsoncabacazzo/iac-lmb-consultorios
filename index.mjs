@@ -8,12 +8,14 @@ const TABLA_USUARIOS = process.env.TABLE_USUARIOS || "docfy-usuarios";
 
 export const handler = async (event) => {
   console.log("🚨 Evento recibido:", JSON.stringify(event));
-  
+  const headers = event.headers || {};
   const httpMethod = event.httpMethod || event.requestContext?.http?.method;
   const pathParameters = event.pathParameters || {};
   
   // Capturamos el rol que viene de Cognito solo para controles de acceso
   const userRole = event.requestContext?.authorizer?.claims?.['custom:role'] || "MEDICO";
+  const consultorioIdHeader = headers['X-Consultorio-Id'] || headers['x-consultorio-id'];
+  const usuarioIdHeader = headers['X-Usuario-Id'] || headers['x-usuario-id'];
 
   try {
     // ========================================================
@@ -98,54 +100,48 @@ export const handler = async (event) => {
     // 📋 2. LISTAR CONSULTORIOS (GET)
     // ========================================================
     if (httpMethod === "GET") {
-    const queryParams = event.queryStringParameters || {};
-    
-    // 1. Prioridad de Roles: Si NO es Admin ni Secretaria, es un médico/usuario restrictivo
-    const esPersonalAutorizado = (userRole === "ADMIN" || userRole === "SECRETARIA");
-    
-    // Determinamos el ID real por el que se va a filtrar
-    // Si es médico, usamos SIEMPRE su ID del token de Cognito para que no pueda espiar a otros
-    const filtroUsuarioId = esPersonalAutorizado ? queryParams.usuarioId : userIdFromToken; 
-
-    let lista = [];
-
-    // 2. Optimización de Base de Datos
-    // Si no hay filtros y es Admin/Secretaria, hacemos el Scan para traer todo
-    if (!filtroUsuarioId && esPersonalAutorizado) {
-      const resultado = await docClient.send(new ScanCommand({
-        TableName: TABLA_CONSULTORIOS
-      }));
-      lista = resultado.Items || [];
-    } 
-    // Si hay un ID de usuario en juego (médico consultando o Admin filtrando a un médico)
-    else if (filtroUsuarioId) {
-      // NOTA: Si en tu tabla el 'usuarioId' fuera una clave de índice (GSI), acá deberías usar QueryCommand.
-      // Si tu estructura actual te obliga a escanear, al menos lo hacemos sabiendo que el ID está blindado:
-      const resultado = await docClient.send(new ScanCommand({
-        TableName: TABLA_CONSULTORIOS
-      }));
-      const items = resultado.Items || [];
       
-      // Filtramos de forma segura
-      lista = items.filter(c => Array.isArray(c.Usuarios) && c.Usuarios.includes(filtroUsuarioId));
-    } 
-    else {
-      // Por si las dudas se escapa algún caso no controlado
-      return respuesta(403, { message: "No tienes permisos para realizar esta consulta." });
-    }
+      const esPersonalAutorizado = (userRole === "ADMIN" || userRole === "SECRETARIA");
+      
+      const filtroUsuarioId = usuarioIdHeader; 
 
-    return respuesta(200, lista);
-  }
+      let lista = [];
+
+      // 2. Optimización de Base de Datos
+      // Si no hay filtros y es Admin/Secretaria, hacemos el Scan para traer todo
+      if (!filtroUsuarioId && esPersonalAutorizado) {
+        const resultado = await docClient.send(new ScanCommand({
+          TableName: TABLA_CONSULTORIOS
+        }));
+        lista = resultado.Items || [];
+      } 
+      // Si hay un ID de usuario en juego (médico consultando o Admin filtrando a un médico)
+      else if (filtroUsuarioId) {
+        // NOTA: Si en tu tabla el 'usuarioId' fuera una clave de índice (GSI), acá deberías usar QueryCommand.
+        // Si tu estructura actual te obliga a escanear, al menos lo hacemos sabiendo que el ID está blindado:
+        const resultado = await docClient.send(new ScanCommand({
+          TableName: TABLA_CONSULTORIOS
+        }));
+        const items = resultado.Items || [];
+        
+        // Filtramos de forma segura
+        lista = items.filter(c => Array.isArray(c.Usuarios) && c.Usuarios.includes(filtroUsuarioId));
+      } 
+      else {
+        // Por si las dudas se escapa algún caso no controlado
+        return respuesta(403, { message: "No tienes permisos para realizar esta consulta." });
+      }
+
+      return respuesta(200, lista);
+    }
 
     // ========================================================
     // 🔄 3. ACTUALIZAR CONSULTORIO (PUT)
     // ========================================================
     if (httpMethod === "PUT") {
-      const idConsultorio = pathParameters.id;
-      if (!idConsultorio) {
-        return respuesta(400, { message: "Se requiere el ID del consultorio." });
+      if (!consultorioIdHeader) {
+        return respuesta(400, { message: "Falta el header obligatorio: X-Consultorio-Id" });
       }
-
       const body = JSON.parse(event.body || "{}");
 
       const updateExpression = [];
