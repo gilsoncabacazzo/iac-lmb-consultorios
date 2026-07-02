@@ -5,6 +5,9 @@ import eslintPluginImport from "eslint-plugin-import"; // ◄ 1. Importás el pl
 export default [
     js.configs.recommended,
     {
+        plugins: {
+            import: eslintPluginImport 
+        },
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: "module",
