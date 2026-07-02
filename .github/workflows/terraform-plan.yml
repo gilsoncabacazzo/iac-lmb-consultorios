@@ -32,7 +32,7 @@ jobs:
 
         # 🆕 PASO 3: Validar Sintaxis de JavaScript
       - name: Validar Sintaxis JS
-        run: npm run validate
+        run: npm run ci
 
          # 🆕 PASO CLAVE: Construir la estructura para la Lambda Layer
       - name: Construir Paquetes ZIP (Código y Layer)
