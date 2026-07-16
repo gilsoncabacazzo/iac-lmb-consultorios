@@ -98,7 +98,6 @@ export const handler = async (event) => {
       
       const result = await docClient.send(new QueryCommand({
                           TableName: TABLA_CONSULTORIOS,
-                          IndexName: "consultorio-id-index", // El nombre del GSI que definiste en Terraform
                           KeyConditionExpression: "consultorio_id = :id",
                           ExpressionAttributeValues: {
                               ":id": consultorioIdHeader
