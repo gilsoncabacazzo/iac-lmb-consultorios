@@ -35,11 +35,13 @@ data "aws_iam_policy_document" "lambda_dynamodb_policy" {
     effect = "Allow"
 
     # Apuntamos directo al ARN de la tabla de usuarios utilizando tu variable existente
-    resources = [
-      "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/tbl-${var.project_name}-usuarios-${var.environment}",
-      "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/tbl-${var.project_name}-usuarios-${var.environment}/index/*"
-
-    ]
+   
+    resources = flatten([
+      for tabla in local.tablas_lista : [
+        "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/tbl-${var.project_name}-${tabla}-${var.environment}",
+        "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/tbl-${var.project_name}-${tabla}-${var.environment}/index/*"
+      ]
+    ])
   }
   # 🔒 Regla 2: Solo lectura estricta para la tabla de usuarios (Validación Multi-tenant)
   statement {
@@ -49,8 +51,10 @@ data "aws_iam_policy_document" "lambda_dynamodb_policy" {
     ]
 
     # Apuntamos directo al ARN de la tabla de usuarios utilizando tu variable existente
-    resources = [
-      "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/tbl-${var.project_name}-usuarios-${var.environment}"
+   resources = [
+      "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/tbl-${var.project_name}-usuarios-${var.environment}",
+      "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/tbl-${var.project_name}-usuarios-${var.environment}/index/*"
+
     ]
   }
 }
