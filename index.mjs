@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand ,ScanCommand ,UpdateCommand} from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand ,ScanCommand,QueryCommand ,UpdateCommand} from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -7,16 +7,12 @@ const TABLA_CONSULTORIOS = process.env.TABLE_CONSULTORIO || "docfy-consultorios"
 const TABLA_USUARIOS = process.env.TABLE_USUARIOS || "docfy-usuarios";
 
 export const handler = async (event) => {
-  console.log("🚨 Evento recibido:", JSON.stringify(event));
   const headers = event.headers || {};
   const httpMethod = event.httpMethod || event.requestContext?.http?.method;
-  const pathParameters = event.pathParameters || {};
   
   // Capturamos el rol que viene de Cognito solo para controles de acceso
-  const userRole = event.requestContext?.authorizer?.claims?.['custom:role'] || "MEDICO";
   const consultorioIdHeader = headers['X-Consultorio-Id'] || headers['x-consultorio-id'];
-  const usuarioIdHeader = headers['X-Usuario-Id'] || headers['x-usuario-id'];
-
+  
   try {
     // ========================================================
     // 🏢 1. INSERTAR CONSULTORIO (POST)
@@ -28,8 +24,6 @@ export const handler = async (event) => {
       if (!body.usuarioId) {
         return respuesta(400, { message: "Error: No se recibió el ID de usuario del sistema." });
       }
-
-      const { nombre, direccion, ciudad, lineaBaja, celular, email, Usuarios } = body;
 
       
       if (!body.nombre || !body.direccion || !body.ciudad || !body.celular || !body.email) {
@@ -60,7 +54,7 @@ export const handler = async (event) => {
         ciudad: body.ciudad,
         lineaBaja: body.lineaBaja || "",
         celular: body.celular,
-        email: email.toLowerCase(),
+        email: body.email.toLowerCase(),
         usuarioId: body.usuarioId, // ◄ Guardado directo con el ID de tu tabla interna de usuarios
         Usuarios: Array.from(usuariosSet), // ◄ Guardado como la lista plana de IDs de Dynamo
         // 💳 OBJETO DE SUSCRIPCIÓN ENCAPSULADO
@@ -101,38 +95,18 @@ export const handler = async (event) => {
     // ========================================================
     if (httpMethod === "GET") {
       
-      const esPersonalAutorizado = (userRole === "ADMIN" || userRole === "SECRETARIA");
       
-      const filtroUsuarioId = usuarioIdHeader; 
+      const result = await docClient.send(new QueryCommand({
+                          TableName: TABLA_CONSULTORIOS,
+                          IndexName: "consultorio-id-index", // El nombre del GSI que definiste en Terraform
+                          KeyConditionExpression: "consultorio_id = :id",
+                          ExpressionAttributeValues: {
+                              ":id": consultorioIdHeader
+                          }
+      }));
 
-      let lista = [];
+      return respuesta( 200, result.Items  ) ;
 
-      // 2. Optimización de Base de Datos
-      // Si no hay filtros y es Admin/Secretaria, hacemos el Scan para traer todo
-      if (!filtroUsuarioId && esPersonalAutorizado) {
-        const resultado = await docClient.send(new ScanCommand({
-          TableName: TABLA_CONSULTORIOS
-        }));
-        lista = resultado.Items || [];
-      } 
-      // Si hay un ID de usuario en juego (médico consultando o Admin filtrando a un médico)
-      else if (filtroUsuarioId) {
-        // NOTA: Si en tu tabla el 'usuarioId' fuera una clave de índice (GSI), acá deberías usar QueryCommand.
-        // Si tu estructura actual te obliga a escanear, al menos lo hacemos sabiendo que el ID está blindado:
-        const resultado = await docClient.send(new ScanCommand({
-          TableName: TABLA_CONSULTORIOS
-        }));
-        const items = resultado.Items || [];
-        
-        // Filtramos de forma segura
-        lista = items.filter(c => Array.isArray(c.Usuarios) && c.Usuarios.includes(filtroUsuarioId));
-      } 
-      else {
-        // Por si las dudas se escapa algún caso no controlado
-        return respuesta(403, { message: "No tienes permisos para realizar esta consulta." });
-      }
-
-      return respuesta(200, lista);
     }
 
     // ========================================================
