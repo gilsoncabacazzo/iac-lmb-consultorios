@@ -5,6 +5,7 @@ const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 const TABLA_CONSULTORIOS = process.env.TABLE_CONSULTORIO || "docfy-consultorios";
 const TABLA_USUARIOS = process.env.TABLE_USUARIOS || "docfy-usuarios";
+const importeMensual = 500000;
 
 export const handler = async (event) => {
   const headers = event.headers || {};
@@ -62,7 +63,8 @@ export const handler = async (event) => {
             estado: "TRIAL",
             fechaInicio: fechaActual.toISOString(),
             fechaFin: fechaFinTrial.toISOString(),
-            ultimaFechaPago: fechaActual.toISOString() // Inicializa con la fecha de alta
+            ultimaFechaPago: fechaActual.toISOString(),
+            monto: importeMensual // Inicializa con la fecha de alta
         },
         fechaCreacion: new Date().toISOString(),
         fechaActualizacion: new Date().toISOString()
@@ -143,7 +145,7 @@ export const handler = async (event) => {
 
       const resultado = await docClient.send(new UpdateCommand({
         TableName: TABLA_CONSULTORIOS,
-        Key: { id: consultorioIdHeader },
+        Key: { consultorio_id: consultorioIdHeader },
         UpdateExpression: `SET ${updateExpression.join(", ")}`,
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
