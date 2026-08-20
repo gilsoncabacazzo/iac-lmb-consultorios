@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand ,ScanCommand,QueryCommand ,UpdateCommand} from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand ,ScanCommand,QueryCommand ,UpdateCommand, GetCommand} from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -98,15 +98,14 @@ export const handler = async (event) => {
     if (httpMethod === "GET") {
       
       
-      const result = await docClient.send(new QueryCommand({
+      const result = await docClient.send(new GetCommand({
                           TableName: TABLA_CONSULTORIOS,
-                          KeyConditionExpression: "consultorio_id = :id",
-                          ExpressionAttributeValues: {
-                              ":id": consultorioIdHeader
+                          Key: {
+                            consultorio_id: consultorioIdHeader, // Aquí pones tu Partition Key
                           }
       }));
 
-      return respuesta( 200, result.Items  ) ;
+      return respuesta( 200, result.Item  ) ;
 
     }
 
