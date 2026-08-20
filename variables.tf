@@ -33,6 +33,9 @@ variable "tabla_usuarios" {
   type        = string
   description = "Nombre exacto de la tabla de turnos"
 }
+variable "lambda_memory_size" {
+  type = number
+}
 variable "runtime" {
   type        = string
   description = "runtime de la lambda"

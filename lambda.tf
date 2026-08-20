@@ -17,7 +17,7 @@ resource "aws_lambda_function" "registro_consultorio" {
   filename         = "${path.module}/build/lambda.zip" # Ruta al ZIP final
   source_code_hash = textencodebase64(filemd5("${path.module}/build/lambda.zip"), "UTF-8")  
   timeout          = 15
-  memory_size      = 128
+  memory_size      = var.lambda_memory_size
 
   layers = [aws_lambda_layer_version.node_dependencies.arn]
 
