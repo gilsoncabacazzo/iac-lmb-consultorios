@@ -1,4 +1,4 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { ConsumedCapacity$, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand ,ScanCommand,QueryCommand ,UpdateCommand, GetCommand} from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
@@ -97,6 +97,7 @@ export const handler = async (event) => {
     // ========================================================
     if (httpMethod === "GET") {
       
+      console.log("consultorio ",consultorioIdHeader);
       
       const result = await docClient.send(new GetCommand({
                           TableName: TABLA_CONSULTORIOS,
