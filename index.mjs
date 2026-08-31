@@ -5,6 +5,8 @@ const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 const TABLA_CONSULTORIOS = process.env.TABLE_CONSULTORIO || "docfy-consultorios";
 const TABLA_USUARIOS = process.env.TABLE_USUARIOS || "docfy-usuarios";
+const precioBase =  process.env.PRECIO_BASE || 500000;
+const precioAdicional =process.env.PRECIO_ADICIONAL || 300000;
 const importeMensual = 500000;
 
 export const handler = async (event) => {
@@ -64,6 +66,8 @@ export const handler = async (event) => {
             fechaInicio: fechaActual.toISOString(),
             fechaFin: fechaFinTrial.toISOString(),
             ultimaFechaPago: fechaActual.toISOString(),
+            precio_base: precioBase,
+            precio_adicional:precioAdicional,
             monto: importeMensual // Inicializa con la fecha de alta
         },
         fechaCreacion: new Date().toISOString(),
